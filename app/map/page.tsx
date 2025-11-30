@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import MapFilters from '@/components/map/MapFilters';
 import Header from '@/components/layout/Header';
-import type { Language, Assessment } from '@/types';
+import type { Language, Assessment, Severity } from '@/types';
 
 // Dynamically import map component to avoid SSR issues with Leaflet
 const FloodMap = dynamic(() => import('@/components/map/FloodMap'), {
@@ -22,7 +22,7 @@ const FloodMap = dynamic(() => import('@/components/map/FloodMap'), {
 export default function MapPage() {
   const [lang, setLang] = useState<Language>('en');
   const [filters, setFilters] = useState<{
-    severity?: string[];
+    severity?: Severity[];
     needs?: string[];
     verified?: boolean;
     district?: string;

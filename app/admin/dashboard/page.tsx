@@ -6,13 +6,13 @@ import SeverityChart from '@/components/dashboard/SeverityChart';
 import NeedsSummary from '@/components/dashboard/NeedsSummary';
 import { supabase } from '@/lib/supabase';
 import { getSeverityColor, getSeverityLabel } from '@/lib/severity-scoring';
-import type { DashboardStats, Assessment, Severity, UrgentNeed } from '@/types';
+import type { DashboardStats, Assessment, Severity } from '@/types';
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     total_reports: 0,
     severity_distribution: { Low: 0, Moderate: 0, High: 0, Critical: 0 },
-    urgent_needs_summary: {} as Record<UrgentNeed, number>,
+    urgent_needs_summary: {},
     district_counts: {},
     high_priority_count: 0,
     active_helpers_count: 0,
@@ -95,7 +95,7 @@ export default function AdminDashboardPage() {
       setStats({
         total_reports: assessments?.length || 0,
         severity_distribution: severityDistribution,
-        urgent_needs_summary: needsSummary as Record<UrgentNeed, number>,
+        urgent_needs_summary: needsSummary,
         district_counts: areaCounts, // Using area_counts but keeping field name for compatibility
         high_priority_count: highPriorityCount,
         active_helpers_count: helpers?.length || 0,

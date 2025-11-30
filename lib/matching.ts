@@ -1,6 +1,6 @@
 // Helper-victim matching algorithm
 
-import type { Helper, Assessment, Match, UrgentNeed, HelperOffering } from '@/types';
+import type { Helper, Assessment, Match, HelperOffering } from '@/types';
 import { calculateDistance } from './geolocation';
 
 const SEVERITY_WEIGHTS: Record<string, number> = {
@@ -10,16 +10,16 @@ const SEVERITY_WEIGHTS: Record<string, number> = {
   Low: 1,
 };
 
-// Map urgent needs to helper offerings
+// Map damaged items and special needs to helper offerings
 const NEED_TO_OFFERING_MAP: Record<string, HelperOffering[]> = {
   food: ['food', 'dry-rations'],
-  clothes: ['food'], // Clothes might be provided with food packages
-  shelter: ['temporary-shelter'],
-  medicine: ['medicine-pickup'],
-  transport: ['transport'],
-  'water-pumping': ['cleanup-support'],
-  'cleanup-support': ['cleanup-support'],
-  'charging-support': ['charging-support'],
+  furniture: ['cleanup-support'], // Furniture damage might need cleanup
+  documents: ['cleanup-support'], // Document damage might need cleanup
+  electronics: ['charging-support'], // Electronics might need charging
+  other: ['cleanup-support'],
+  elderly: ['medicine-pickup', 'food'], // Elderly might need medicine and food
+  children: ['food', 'water'], // Children need food and water
+  sick: ['medicine-pickup', 'transport'], // Sick person might need medicine and transport
 };
 
 export function matchHelpersToVictims(
@@ -85,7 +85,14 @@ function calculateMatchScore(
   score += distanceScore;
   
   // Need matching score (0-30 points)
-  const needMatchScore = calculateNeedMatchScore(helper.offerings, assessment.urgent_needs);
+  // Use damaged_items and special needs instead of urgent_needs
+  const needs: string[] = [
+    ...(assessment.damaged_items || []),
+    ...(assessment.has_elderly ? ['elderly'] : []),
+    ...(assessment.has_children ? ['children'] : []),
+    ...(assessment.has_sick_person ? ['sick'] : []),
+  ];
+  const needMatchScore = calculateNeedMatchScore(helper.offerings, needs);
   score += needMatchScore;
   
   return Math.round(score);
@@ -93,7 +100,7 @@ function calculateMatchScore(
 
 function calculateNeedMatchScore(
   offerings: HelperOffering[],
-  needs: UrgentNeed[]
+  needs: string[]
 ): number {
   if (needs.length === 0) return 0;
   

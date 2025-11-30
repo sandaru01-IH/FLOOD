@@ -30,6 +30,49 @@ export type MatchStatus = 'pending' | 'contacted' | 'completed';
 
 export type Language = 'en' | 'si' | 'ta';
 
+export type HelperOffering = 
+  | 'food' 
+  | 'water' 
+  | 'temporary-shelter' 
+  | 'transport' 
+  | 'dry-rations' 
+  | 'cleanup-support' 
+  | 'medicine-pickup' 
+  | 'charging-support';
+
+export interface HelperFormData {
+  name: string;
+  phone: string;
+  email?: string;
+  offerings: HelperOffering[];
+  capacity: number;
+  radius_km: number;
+  available_times: {
+    start: string;
+    end: string;
+    days: string[];
+  };
+  location: Location | null;
+}
+
+export interface Helper extends Omit<HelperFormData, 'location'> {
+  id: string;
+  location: Location;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Match {
+  id: string;
+  helper_id: string;
+  assessment_id: string;
+  match_score: number;
+  status: MatchStatus;
+  created_at: string;
+  distance_km: number;
+}
+
 export interface Location {
   lat: number;
   lng: number;
@@ -140,7 +183,7 @@ export interface AdminSession {
 export interface DashboardStats {
   total_reports: number;
   severity_distribution: Record<Severity, number>;
-  urgent_needs_summary: Record<UrgentNeed, number>;
+  urgent_needs_summary: Record<string, number>;
   district_counts: Record<string, number>;
   high_priority_count: number;
   active_helpers_count: number;

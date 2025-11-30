@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import LanguageToggle from '@/components/ui/LanguageToggle';
@@ -9,13 +9,14 @@ import { findMatchesForHelper } from '@/lib/matching';
 import { getSeverityColor, getSeverityLabel } from '@/lib/severity-scoring';
 import type { Helper, Assessment, Match, Language } from '@/types';
 
-export default function HelperMatchesPage() {
+function HelperMatchesContent() {
   const [lang, setLang] = useState<Language>('en');
   const searchParams = useSearchParams();
   const helperId = searchParams.get('helper_id');
   
   const [helper, setHelper] = useState<Helper | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [assessmentsMap, setAssessmentsMap] = useState<Map<string, Assessment>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,7 +66,7 @@ export default function HelperMatchesPage() {
           .select('*')
           .eq('helper_id', helperId);
 
-        // Merge with existing matches
+        // Merge with existing matches and attach assessments
         const mergedMatches = matched.map((match) => {
           const existing = existingMatches?.find(
             (m) => m.assessment_id === match.assessment_id
@@ -74,13 +75,16 @@ export default function HelperMatchesPage() {
             ...match,
             id: existing?.id || match.id,
             status: existing?.status || match.status,
-            assessment: assessmentsWithLocation.find(
-              (a: any) => a.id === match.assessment_id
-            ),
           };
         });
 
+        // Store assessments separately for lookup
+        const assessmentsMap = new Map(
+          assessmentsWithLocation.map((a: any) => [a.id, a as Assessment])
+        );
+
         setMatches(mergedMatches);
+        setAssessmentsMap(assessmentsMap);
       } catch (error) {
         console.error('Error loading matches:', error);
       } finally {
@@ -152,7 +156,7 @@ export default function HelperMatchesPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {matches.map((match) => {
-              const assessment = match.assessment as Assessment;
+              const assessment = assessmentsMap.get(match.assessment_id);
               if (!assessment) return null;
 
               return (
@@ -179,31 +183,34 @@ export default function HelperMatchesPage() {
                     </p>
                   )}
 
-                  <div className="mb-4">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Urgent Needs:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {assessment.urgent_needs.map((need) => (
-                        <span
-                          key={need}
-                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
-                        >
-                          {need.replace('-', ' ')}
-                        </span>
-                      ))}
+                  {(assessment.damaged_items && assessment.damaged_items.length > 0) && (
+                    <div className="mb-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Damaged Items:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {assessment.damaged_items.map((item) => (
+                          <span
+                            key={item}
+                            className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                          >
+                            {item}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {assessment.vulnerabilities && (
+                  {(assessment.has_elderly || assessment.has_children || assessment.has_sick_person) && (
                     <div className="mb-4 text-sm text-gray-600">
-                      {(assessment.vulnerabilities.elderly > 0 ||
-                        assessment.vulnerabilities.infants > 0 ||
-                        assessment.vulnerabilities.disabled > 0) && (
-                        <p>
-                          ⚠️ Vulnerable: {assessment.vulnerabilities.elderly} elderly,{' '}
-                          {assessment.vulnerabilities.infants} infants,{' '}
-                          {assessment.vulnerabilities.disabled} disabled
-                        </p>
-                      )}
+                      <p>
+                        ⚠️ Special Needs:{' '}
+                        {[
+                          assessment.has_elderly && 'Elderly',
+                          assessment.has_children && 'Children',
+                          assessment.has_sick_person && 'Sick person',
+                        ]
+                          .filter(Boolean)
+                          .join(', ')}
+                      </p>
                     </div>
                   )}
 
@@ -232,6 +239,21 @@ export default function HelperMatchesPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function HelperMatchesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <HelperMatchesContent />
+    </Suspense>
   );
 }
 
